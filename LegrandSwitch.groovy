@@ -39,6 +39,7 @@ metadata {
                 attributeState "level", action:"switch level.setLevel"
             }
         }
+
         /*
 		main(["switch"])
         details(["switch", "levelSliderControl"])
@@ -69,7 +70,6 @@ def propertiesChanged (propList) {
 
 def installed() {
     // TODO: What do we put here?
-    // response(refresh())
 }
 
 def updated(){
@@ -95,13 +95,6 @@ def off() {
 def setLevel(value) {
     def zid = getLightZID()
     def cmd = parent.setZonePropertiesCmd(zid, ["PowerLevel": value])
-    parent.sendLegrandHubMessage(cmd)
-}
-
-def refresh() {
-    // TODO: This is not called from anywhere. Need to add refresh tile.
-    def zid = getLightZID()
-    def cmd = parent.getZonePropertiesCmd(zid)
     parent.sendLegrandHubMessage(cmd)
 }
 

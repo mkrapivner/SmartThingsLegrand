@@ -60,8 +60,6 @@ def hubDiscovery() {
             input "legrand_ip", "text", title: "IP address"
         }
     }
-
-    // TODO: Look at getDSInfo(), and only send '/init' to Web Server when needed.
 }
 
 def lightsDiscovery() {
@@ -368,9 +366,7 @@ def updated() {
 }
 
 def initialize() {
-    // TODO: subscribe to attributes, devices, locations, etc.
     unsubscribe()
-    // subscribe(themotion, "motion.active", motionDetectedHandler)
     if(!state.subscribe) {
         log.trace "subscribe to location"
         subscribe(location, null, locationHandler, [filterEvents:false])
