@@ -241,14 +241,8 @@ private def parseEventMessage(Map event) {
 
 def postNotifyCallback() {
     // log.debug ("In postNotifyCallback")
-    // JSON can be sent either in request.JSON or in params.
-    // Handle both (Node.JS sends in request.JSON, python flask sends in params.
-    // Should probably figure out why this is, but whatever
     def reqJSON = request.JSON?:null
-    if (!reqJSON)
-    	reqJSON = params
-
-    log.debug ("In postNotifyCallback, reqJSON: ${reqJSON}")
+    // log.debug ("reqJSON: ${reqJSON}")
     switch (reqJSON?.Service) {
         case "WebServerUpdate":
             if (reqJSON.containsKey("hubConnected")) {
