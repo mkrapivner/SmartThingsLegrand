@@ -5,7 +5,7 @@ This is an unofficial SmartApp and Device Handler for the Legrand Adorne (LC7001
 - The web server, Legrand hub, and the SmartThings hub need to be on the same local network.
 
 ## Setup
-- If you don't have node installed yet, install [node](https://nodejs.org/en/download/) on the web server machine. The installation steps will vary based on your OS and flavor of Linux.
+- If you don't have node installed yet, install [node](https://nodejs.org/en/download/) on the web server machine. The installation steps will vary based on your flavor of Linux.
 - You may need to install some node modules. After node has been installed, run:
 
 `npm install telnet-client`  
