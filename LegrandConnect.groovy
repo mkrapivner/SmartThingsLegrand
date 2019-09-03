@@ -389,7 +389,6 @@ def addLights() {
                 log.trace "created ${d.displayName} with id ${newLightDNI}"
 
                 // set up device capabilities here ??? TODO ???
-                //d.setModel(newPlayer?.value.model)
             } else {
                 log.debug "Found existing light ${d.displayName} with DNI ${newLightDNI}, not adding another."
             }

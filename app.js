@@ -1,7 +1,3 @@
-// TO GET ST IP AND PORT (port is usually 39500)
-// device.hub.getDataValue(“localIP”); device.hub.getDataValue(“localSrvPortTCP”).
-// Device handler to handle incoming events: https://community.smartthings.com/t/how-can-i-receive-lan-messages-on-the-st-hub-when-the-messages-can-come-at-any-point/54912/9
-
 // use `pm2 start app.js` to start node serve
 // then, `pm2 show 0` to show runnng app
 // `pm2 logs app` to show trailing logs
