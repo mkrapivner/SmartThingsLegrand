@@ -1,5 +1,7 @@
 # SmartThingsLegrand
 This is an unofficial SmartApp and Device Handler for the Legrand Adorne (LC7001 hub), after Legrand moved out of the Artik cloud. This requires "advanced" setup skills.
+
+*The web server is the author's first node.js project, and as such it is likely not optimal. Any suggestions and improvements are welcome.*
 ## Requirements
 - An "always-on" Linux machine (NAS, Raspberry Pi, etc.) to run as a web server "man in the middle"
 - The web server, Legrand hub, and the SmartThings hub need to be on the same local network.
