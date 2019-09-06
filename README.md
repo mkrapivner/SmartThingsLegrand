@@ -17,11 +17,11 @@ This is an unofficial SmartApp and Device Handler for the Legrand Adorne (LC7001
 ### On the web server
 - Assuming you checked out the source code to `~/legrand`:  
 `cd ~/legrand`  
-`node app.js`  
+`node legrand.js`  
 You should see something like `Server listening on port 21120` on the console
-- If you have installed `pm2`, instead of starting `node app.js` directly, you can start the web server as follows:  
+- If you have installed `pm2`, instead of starting `node legrand.js` directly, you can start the web server as follows:  
 `cd ~/legrand`  
-`pm2 start app`
+`pm2 start legrand`
 
 ### SmartThings
 - Open SmartThings IDE, and add code from **LegrandConnect.groovy** as the SmartApp, and **LegrandSwitch.groovy** as the device handler.
