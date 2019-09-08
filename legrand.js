@@ -182,3 +182,45 @@ function connectToHub() {
     timeout: 10000
   });
 }
+
+// ===== SEND MESSAGE TO SMARTTHINGS HUB BEFORE EXITING =====
+function sendHailMary(callback) {
+  console.log ("Sending Hail Mary");
+  sendToSmartThings({
+    "hubConnected": false,
+    "error": "Legrand web server is about to die."
+  });
+  console.log ("Sent Hail Mary to ST hub.");
+  callback()
+}
+
+function killProcess() {
+  sendHailMary(function() {
+    console.log('Exit handler completed Hail Mary');
+  });
+
+  console.log('Process will exit in 5 seconds');
+  setTimeout(function () {
+    process.exit();
+  }, 5000);
+}
+
+// https://nodejs.org/api/process.html#process_signal_events
+process.on('SIGTERM', killProcess);
+process.on('SIGINT', killProcess);
+
+process.on('uncaughtException', function(e) {
+
+  console.log('[uncaughtException] app will be terminated: ', e.stack);
+
+  killProcess();
+  /**
+   * @https://nodejs.org/api/process.html#process_event_uncaughtexception
+   *
+   * 'uncaughtException' should be used to perform synchronous cleanup before shutting down the process.
+   * It is not safe to resume normal operation after 'uncaughtException'.
+   * If you do use it, restart your application after every unhandled exception!
+   *
+   * You have been warned.
+   */
+});
