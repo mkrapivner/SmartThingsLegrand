@@ -27,6 +27,7 @@ definition(
 
 
 preferences {
+    page(name:"hubInfo", title:"Legrand Hub Info", content:"hubInfo", install:false, uninstall:true)
     page(name:"hubDiscovery", title:"Connect with your Legrand Hub", content:"hubDiscovery", install: false, uninstall:true)
     page(name:"lightsDiscovery", title:"Add These Lights", content:"lightsDiscovery", refreshInterval:5, install:true)
 }
@@ -37,6 +38,22 @@ mappings {
                 POST: "postNotifyCallback",
                 GET: "getNotifyCallback"
         ]
+    }
+}
+
+def hubInfo() {
+    if (!state.hubConnected && !state.lightsList)
+        hubDiscovery()
+    else {
+        return dynamicPage(name:"hubInfo", title:"Legrand Hub Info", nextPage:"hubDiscovery", uninstall:true, install:false) {
+            section ("General Hub Info") {
+                paragraph "Hub Model: " + state.hubModel
+                paragraph "Firmware Version: " + state.hubFirmwareVersion
+                paragraph "Firmware Branch: " + state.hubFirmwareBranch
+                paragraph title: "Update State", new groovy.json.JsonBuilder(state.hubUpdateState).toPrettyString()
+                paragraph title: "Debug Data", "Hub Mac Address: " + state.hubMacAddress + ", Hub House ID: " + state.hubHouseID
+            }
+        }
     }
 }
 
@@ -241,8 +258,14 @@ private def parseEventMessage(Map event) {
 
 def postNotifyCallback() {
     // log.debug ("In postNotifyCallback")
+    // JSON can be sent either in request.JSON or in params.
+    // Handle both (Node.JS sends in request.JSON, python flask sends in params.
+    // Should probably figure out why this is, but whatever
     def reqJSON = request.JSON?:null
-    // log.debug ("reqJSON: ${reqJSON}")
+    if (!reqJSON)
+        reqJSON = params
+
+    log.debug ("In postNotifyCallback, reqJSON: ${reqJSON}")
     switch (reqJSON?.Service) {
         case "WebServerUpdate":
             if (reqJSON.containsKey("hubConnected")) {
@@ -284,6 +307,15 @@ def postNotifyCallback() {
             // device already added, just update it's properties
                 d.propertiesChanged(reqJSON.PropertyList?:null)
             state.lightsList[Integer.toString(zone)] = reqJSON.PropertyList
+            break
+        case "SystemInfo":
+            state.hubModel = reqJSON.Model
+            state.hubFirmwareVersion = reqJSON.FirmwareVersion
+            state.hubFirmwareDate = reqJSON.FirmwareDate
+            state.hubFirmwareBranch = reqJSON.FirmwareBranch
+            state.hubMacAddress = reqJSON.MACAddress
+            state.hubHouseID = reqJSON.HouseID
+            state.hubUpdateState = reqJSON.UpdateState
             break
         default:
             break
@@ -392,10 +424,6 @@ def addLights() {
             } else {
                 log.debug "Found existing light ${d.displayName} with DNI ${newLightDNI}, not adding another."
             }
-
-            // set up even if already installed in case setup has changed
-            // TODO (MATT): See what the line below does
-            //d.initChild(state.cameraCapabilities[makeCameraModelKey(newCamera)])
         }
     }
 }
