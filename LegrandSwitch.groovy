@@ -55,10 +55,11 @@ def propertiesChanged (propList) {
 
     propList.each { key, val ->
         if (key == "Power") {
-            if (val.toBoolean() == true && device.currentState("switch")?.value == "off")
+            if (val.toBoolean() == true && (device.currentState("switch")?.value == "off" || device.currentState("switch")?.value == null)) {
                 sendEvent(name: "switch", value: "on")
-            else if (val.toBoolean() == false && device.currentState("switch")?.value == "on")
+            } else if (val.toBoolean() == false && (device.currentState("switch")?.value == "on" || device.currentState("switch")?.value == null)) {
                 sendEvent(name: "switch", value: "off")
+            }                
         } else if (key == "PowerLevel") {
             if (val.toInteger() != device.currentState("level")?.value) {
                 sendEvent(name: "level", value: val.toInteger())
