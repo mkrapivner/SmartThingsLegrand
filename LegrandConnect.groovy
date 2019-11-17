@@ -46,12 +46,11 @@ def hubInfo() {
         hubDiscovery()
     else {
         return dynamicPage(name:"hubInfo", title:"Legrand Hub Info", nextPage:"hubDiscovery", uninstall:true, install:false) {
-            section ("General Hub Info") {
-                paragraph "Hub Model: " + state.hubModel
-                paragraph "Firmware Version: " + state.hubFirmwareVersion
-                paragraph "Firmware Branch: " + state.hubFirmwareBranch
+            section{
+                paragraph title: "Connected Hub Info",
+                        "Hub Model: " + state.hubModel + "\nFirmware Version: " + state.hubFirmwareVersion + "\nFirmware Date: " + state.hubFirmwareDate + "\nFirmware Branch: " + state.hubFirmwareBranch
                 paragraph title: "Update State", new groovy.json.JsonBuilder(state.hubUpdateState).toPrettyString()
-                paragraph title: "Debug Data", "Hub Mac Address: " + state.hubMacAddress + ", Hub House ID: " + state.hubHouseID
+                paragraph title: "Debug Data", "Hub IP: " + state.legrand_ip + "\nHub Mac Address: " + state.hubMacAddress + "\nHub House ID: " + state.hubHouseID
             }
         }
     }
@@ -307,6 +306,12 @@ def postNotifyCallback() {
             // device already added, just update it's properties
                 d.propertiesChanged(reqJSON.PropertyList?:null)
             state.lightsList[Integer.toString(zone)] = reqJSON.PropertyList
+            break
+        case "ZoneAdded":
+            // TODO
+            break
+        case "ZoneDeleted":
+            // TODO
             break
         case "SystemInfo":
             state.hubModel = reqJSON.Model
