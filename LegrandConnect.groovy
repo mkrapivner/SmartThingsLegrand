@@ -285,7 +285,7 @@ def postNotifyCallback() {
             }
             break
         case "ZonePropertiesChanged":
-            if (!reqJSON.ZID)
+            if (!reqJSON.containsKey("ZID"))
                 log.error ("ZID not found in POST request. Request JSON: ${reqJSON}")
             else {
                 def d = getChildDevice(createDNI(reqJSON.ZID))
