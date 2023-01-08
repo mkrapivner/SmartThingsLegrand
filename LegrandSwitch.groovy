@@ -39,11 +39,6 @@ metadata {
                 attributeState "level", action:"switch level.setLevel"
             }
         }
-
-        /*
-		main(["switch"])
-        details(["switch", "levelSliderControl"])
-        */
     }
 }
 

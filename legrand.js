@@ -100,7 +100,7 @@ app.post('/init', function (req, res) {
 app.get('/status', function (req, res) {
   //console.log ("Received /status request");
   res.json({
-    "hubConnected": lc7001.connected
+    "initHubConnected": lc7001.connected
   })
 });
 
@@ -126,7 +126,8 @@ server.on("data", function(data){
   splitData.forEach(function (resp) {
     if (resp.length > 0) {
       let response = JSON.parse(resp);
-      if (["ping", "EliotErrors", "BroadcastDiagnostics", "BroadcastMemory", "SystemPropertiesChanged"].indexOf(response.Service) == -1) {
+      if ((["ping", "EliotErrors", "BroadcastDiagnostics", "BroadcastMemory", "SystemPropertiesChanged"].indexOf(response.Service) == -1) &&
+            !(response.DebugStr)) {
         // Send a POST request to SmartThings
         console.log ("Notifying SmartThings with POST update: " + resp);
         // console.log(response);

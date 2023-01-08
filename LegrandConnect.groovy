@@ -1,7 +1,7 @@
 /**
  *  Legrand Connect (Unofficial)
  *
- *  Copyright 2019 Matt Krapivner
+ *  Copyright 2019-2023 Matt Krapivner
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -35,8 +35,8 @@ preferences {
 mappings {
     path("/HubNotify") {
         action: [
-                POST: "postNotifyCallback",
-                GET: "getNotifyCallback"
+                POST: "postHubNotify",
+                GET: "getHubNotify"
         ]
     }
 }
@@ -59,11 +59,6 @@ def hubInfo() {
 def hubDiscovery() {
     // clear the refresh count for the next page
     state.refreshCount = 0
-    if(!state.subscribe) {
-        log.trace "subscribe to location"
-        subscribe(location, null, locationHandler, [filterEvents:false])
-        state.subscribe = true
-    }
     state.error = ""
 
     return dynamicPage(name:"hubDiscovery", title:"Connect with your Legrand Hub", nextPage: "lightsDiscovery", uninstall:true, install:false) {
@@ -75,15 +70,14 @@ def hubDiscovery() {
         section ("Address of the Legrand Hub:") {
             input "legrand_ip", "text", title: "IP address"
         }
+
+        section ("Notify this device:") {
+            input "notificationDevice", "capability.notification", multiple: false, required: false
+        }
     }
 }
 
 def lightsDiscovery() {
-    if(!state.subscribe) {
-        log.trace "subscribe to location"
-        subscribe(location, null, locationHandler, [filterEvents:false])
-        state.subscribe = true
-    }
     def doRescan = false
     if (state.node_ip != node_ip || state.legrand_ip != legrand_ip) {
         doRescan = true
@@ -99,7 +93,7 @@ def lightsDiscovery() {
         createAccessToken()
     }
 
-    def apiServerUrl = apiServerUrl("/api/token/${state.accessToken}/smartapps/installations/${app.id}/HubNotify")
+    def apiServerUrl = getFullLocalApiServerUrl() + "/HubNotify?access_token=${state.accessToken}"
     // check for timeout error
     state.refreshCount = state.refreshCount+1
     if (state.refreshCount > 20) {
@@ -150,65 +144,22 @@ def lightsDiscovery() {
     }
 }
 
-void locationHandler(evt) {
-    // log.debug "Entered locationHandler"
-    def parsedEvent = parseEventMessage(evt.description)
-    // log.debug "evt.description: ${evt.description}"
-
-    /*
-    log.debug "installedSmartAppId: ${evt.installedSmartAppId}"
-    log.debug "name: ${evt.name}"
-    log.debug "source: ${evt.source}"
-    log.debug "Is this event a state change? ${evt.isStateChange()}"
-    */
-    if (parsedEvent.headers && parsedEvent.body) {
-        // Node server responded
-        def sHeader = new String(parsedEvent.headers.decodeBase64())
-        def sBody = new String(parsedEvent.body.decodeBase64())
-        //log.debug "headers: ${sHeader}"
-        //log.debug "body: ${sBody}"
-        // Node server will always respond with application/json
-        def body = new groovy.json.JsonSlurper().parseText(sBody)
-        log.debug "parsed body: ${body}"
-        if (body.containsKey("initReceived")) {
-            // wait for "hub connected"
-            prepareNodeMessage("/status")
-        } else if (body.containsKey("hubConnected")) {
-            // TODO This is a response to "/status", but we are not getting it for some reason?
-            state.hubConnected = body.hubConnected
-            // get the list of lights
-            if (state.hubConnected) {
-                sendLegrandHubMessage(getSystemInfoCmd())
-                sendLegrandHubMessage(getReportSystemPropertiesCmd())
-                sendLegrandHubMessage(getZonesCmd())
-            }
-        }
-    }
-}
-
 def prepareNodeMessage(String nodePath, Map params=null) {
     try {
         def httpMethod = "GET"
         if (nodePath in ["/command", "/init"])
             httpMethod = "POST"
 
-        def reqHeader = [HOST: "${state.node_ip}:${state.node_port}"]
-        def reqQuery = params
-        def reqBody = null
-        if (httpMethod == "POST")
-            reqHeader << ["Content-Type": "application/json"]
-        reqQuery = null
-        reqBody = new groovy.json.JsonBuilder(params).toPrettyString()
-        def hubAction = new physicalgraph.device.HubAction(
-                method: httpMethod,
-                path: nodePath,
-                headers: reqHeader,
-                query: reqQuery,
-                body: reqBody
-        )
-        def requestId = hubAction.requestId
-        log.debug "Sending ${httpMethod} ${nodePath} command, requestId: ${requestId}, params: ${params}"
-        sendHubCommand(hubAction)
+        def reqParams = [uri: "http://${state.node_ip}:${state.node_port}/${nodePath}"]
+        if (httpMethod == "POST") {
+            reqParams << [body: new groovy.json.JsonBuilder(params).toPrettyString()]
+            reqParams << [contentType: "application/json"]
+            asynchttpPost("postNotifyCallback", reqParams)
+        } else {
+            asynchttpGet("getNotifyCallback", reqParams)
+        }
+
+        log.debug "Sending ${httpMethod} ${nodePath} command, reqParams: ${reqParams}"
     } catch (e) {
         log.error "Caught exception sending ${httpMethod} status command: ${e}"
     }
@@ -218,53 +169,19 @@ def sendLegrandHubMessage(Map cmd) {
     prepareNodeMessage("/command", cmd)
 }
 
-private def parseEventMessage(String description) {
-    def event = [:]
-    def parts = description.split(',')
-    parts.each { part ->
-        part = part.trim()
-        if (part.startsWith('headers')) {
-            part -= "headers:"
-            def valueString = part.trim()
-            if (valueString) {
-                event.headers = valueString
-            }
-        }
-        else if (part.startsWith('body')) {
-            part -= "body:"
-            def valueString = part.trim()
-            if (valueString) {
-                event.body = valueString
-            }
-        }
-        else if (part.startsWith('requestId')) {
-            part -= "requestId:"
-            def valueString = part.trim()
-            if (valueString) {
-                event.requestId = valueString
-            }
-        }
-    }
-
-    return event
+def getHubNotify() {
+    log.trace("In getHubNotify")
 }
 
-private def parseEventMessage(Map event) {
-    //handles attribute events
-    log.trace "map event recd = " + event
-    return event
-}
-
-def postNotifyCallback() {
-    // log.debug ("In postNotifyCallback")
+def postHubNotify() {
     // JSON can be sent either in request.JSON or in params.
     // Handle both (Node.JS sends in request.JSON, python flask sends in params.
-    // Should probably figure out why this is, but whatever
+
+    // log.info("In postHubNotify, request: ${request}, params: ${params}")
     def reqJSON = request.JSON?:null
     if (!reqJSON)
         reqJSON = params
 
-    log.debug ("In postNotifyCallback, reqJSON: ${reqJSON}")
     switch (reqJSON?.Service) {
         case "WebServerUpdate":
             if (reqJSON.containsKey("hubConnected")) {
@@ -272,14 +189,14 @@ def postNotifyCallback() {
                 if (state.hubConnected && !hubConnected) {
                     state.hubConnected = false
                     def error = reqJSON.error?:"Unknown"
-                    sendPush("Legrand hub disconnected. Error: ${error}")
+                    notificationDevice.deviceNotification("Legrand hub disconnected. Error: ${error}") // hail Mary is sent here
                 } else if (!state.hubConnected && hubConnected) {
                     state.hubConnected = true
                     // get the list of lights
                     sendLegrandHubMessage(getSystemInfoCmd())
                     sendLegrandHubMessage(getReportSystemPropertiesCmd())
                     sendLegrandHubMessage(getZonesCmd())
-                    sendPush("Legrand hub connected")
+                    notificationDevice.deviceNotification("Legrand hub connected")
                 }
             }
             break
@@ -328,14 +245,53 @@ def postNotifyCallback() {
     return [foo: reqJSON?.foo, bar: reqJSON?.bar]
 }
 
-def getNotifyCallback() {
-    log.debug ("query params: ${params}")
-    // We need to reference specific parameters we want, because params map contains other useless junk
-    return [data: "test"]
+def postNotifyCallback(response, data) {
+    // log.debug ("In postNotifyCallback")
+    if (response.hasError()) {
+        def errorData = response.getErrorData()
+        def errorMsg = response.getErrorMessage()
+        // log.debug("In postNotifyCallback, errorData: ${errorData}, errorMsg: ${errorMsg}")
+        return
+    }
+    def status = response.getStatus()
+    def respData = response.getData()
+    def reqJSON = response.getJson()
+
+    // log.trace ("In postNotifyCallback, status: ${status}, respData: ${respData}, data: ${data}, reqJSON: ${reqJSON}")
+
+    if (reqJSON.containsKey("initReceived")) {
+        prepareNodeMessage("/status")
+    }
+}
+
+def getNotifyCallback(response, data) {
+    // log.debug ("In getNotifyCallback")
+    if (response.hasError()) {
+        def errorData = response.getErrorData()
+        def errorMsg = response.getErrorMessage()
+        log.trace("In getNotifyCallback, errorData: ${errorData}, errorMsg: ${errorMsg}")
+        return
+    }
+    def status = response.getStatus()
+    def respData = response.getData()
+    def respJSON = response.getJson()
+
+    log.trace ("In getNotifyCallback, status: ${status}, respData: ${respData}, data: ${data}, respJSON: ${respJSON}")
+
+    if (respJSON.containsKey("initHubConnected")) {
+        // This is a response to "/status"
+        state.hubConnected = respJSON.initHubConnected
+        // get the list of lights, we are initializing
+        if (state.hubConnected) {
+            sendLegrandHubMessage(getSystemInfoCmd())
+            sendLegrandHubMessage(getReportSystemPropertiesCmd())
+            sendLegrandHubMessage(getZonesCmd())
+        }
+    }
 }
 
 def lightsDiscovered() {
-    //log.debug ("In lightsDiscovered")
+    log.trace ("In lightsDiscovered")
     def map = [:]
     def allFound = true
     state.lightsList.each { key, val ->
@@ -397,18 +353,10 @@ def installed() {
 
 def updated() {
     //log.debug "Updated with settings: ${settings}"
-
-    unsubscribe()
     initialize()
 }
 
 def initialize() {
-    unsubscribe()
-    if(!state.subscribe) {
-        log.trace "subscribe to location"
-        subscribe(location, null, locationHandler, [filterEvents:false])
-        state.subscribe = true
-    }
     if (selectedLights)
         addLights()
 }
@@ -422,7 +370,7 @@ def addLights() {
             // log.trace "newLightDNI = " + newLightDNI
             def d = getChildDevice(newLightDNI)
             if(!d) {
-                d = addChildDevice("mkrapivner", "Dimmer Switch", newLightDNI, state.hub, [label: newLight.Name]) //, completedSetup: true
+                d = addChildDevice("mkrapivner", "Dimmer Switch", newLightDNI, [label: newLight.Name])
                 log.trace "created ${d.displayName} with id ${newLightDNI}"
 
                 // set up device capabilities here ??? TODO ???
