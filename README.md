@@ -1,5 +1,5 @@
-# SmartThingsLegrand
-This is an unofficial SmartApp and Device Handler for the Legrand Adorne (LC7001 hub), after Legrand moved out of the Artik cloud. This requires "advanced" setup skills.
+# Legrand Adorne for Hubitat
+This is an unofficial App and Device Handler for the Legrand Adorne (LC7001 hub). This requires "advanced" setup skills.
 
 *The web server is the author's first node.js project, and as such it is likely not optimal. Any suggestions and improvements are welcome.*
 ## Requirements
@@ -23,14 +23,15 @@ You should see something like `Server listening on port 21120` on the console
 `cd ~/legrand`  
 `pm2 start legrand`
 
-### SmartThings
-- Open SmartThings IDE, and add code from **LegrandConnect.groovy** as the SmartApp, and **LegrandSwitch.groovy** as the device handler.
-- From your mobile SmartThings app, install SmartApp -> My Apps -> Legrand (Connect).
-- On the SmartApp screen, you will need to enter the IP address of the web server, port number of the web server (enter **21120**, unless this port number conflicts with something in your system, in which case change it in app.js code and here).
+### Hubitat
+- Add code from **LegrandConnect.groovy** as the app, and **LegrandSwitch.groovy** as the device handler.
+- Install the app: Apps -> Add User App -> Legrand (Connect).
+- Once the app starts, you will need to enter the IP address of the web server, port number of the web server (enter **21120**, unless this port number conflicts with something in your system, in which case change it in legrand.js code and here).
 - You will also need to enter the IP address of the Legrand Hub.
+- If you want to receive push notifications when the Legrand hub disconnects and reconnects from the node.js server, select your device in "Notify this device" section. The Legrand hub disconnect/reconnect events are the only notifications the app sends.
 - After you tap **Next**, it will take a few seconds to discover the Legrand lights in your system.
-- Select the ones you want to control from SmartThings, and tap **Save**
-- The lights should show up under "Things" in SmartThings.
+- Select the ones you want to control from Hubitat, and tap **Done**
+- The lights should show up as "Dimmer Switch" under Devices.
 
 ### Notes
 - Currently, there is no differentiation between "Switch" and "Dimmer". As a result, the dimmer slider will show up in the device handler even for the switches without the dimmer. It won't hurt anything, but obviously don't expect it to dim your lights as you play around with it... The on/off functionality still works.
