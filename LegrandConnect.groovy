@@ -42,6 +42,12 @@ mappings {
 }
 
 def hubInfo() {
+    if (!state.subscribed) {
+        subscribe(location, "systemStart", rebootHandler)
+        state.subscribed = true
+        log.trace "Subscribed to systemStart"
+    }
+
     if (!state.hubConnected && !state.lightsList)
         hubDiscovery()
     else {
@@ -357,8 +363,22 @@ def updated() {
 }
 
 def initialize() {
+    if (!state.subscribed) {
+        subscribe(location, "systemStart", rebootHandler)
+        state.subscribed = true
+    }
+
     if (selectedLights)
         addLights()
+}
+
+def rebootHandler(evt) {
+    log.trace "In rebootHandler"
+    def childDevices = getAllChildDevices()
+    // We rebooted, let's update the status of all switches
+    childDevices.each { d ->
+        sendLegrandHubMessage(getZonePropertiesCmd(d.getLightZID()))
+    }
 }
 
 def addLights() {
