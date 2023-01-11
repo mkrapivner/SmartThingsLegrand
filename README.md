@@ -7,6 +7,16 @@ This is an unofficial App and Device Handler for the Legrand Adorne (LC7001 hub)
 - The web server, Legrand hub, and the SmartThings hub need to be on the same local network.
 
 ## Setup
+### Run node in Docker (easiest)
+- Build the docker image:
+```commandline
+% cd node
+% docker build . -t legrand_hubitat_bridge
+```
+- Run the docker image using your environment's docker engine.
+  You should see something like `Server listening on port 21120` on the console
+
+### Run node natively (option 2)
 - If you don't have node installed yet, install [node](https://nodejs.org/en/download/) on the web server machine. The installation steps will vary based on your flavor of Linux.
 - You may need to install some node modules. After node has been installed, run:
 
@@ -14,7 +24,7 @@ This is an unofficial App and Device Handler for the Legrand Adorne (LC7001 hub)
 `npm install express`  
 `npm install request`  
 - The JavaScript app can sometimes crash, so it is wise to run it under a monitoring app. I use `pm2`, but you can use whatever you want.
-### On the web server
+
 - Assuming you checked out the source code to `~/legrand`:  
 `cd ~/legrand`  
 `node legrand.js`  
