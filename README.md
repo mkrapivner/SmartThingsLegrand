@@ -13,8 +13,12 @@ This is an unofficial App and Device Handler for the Legrand Adorne (LC7001 hub)
 % cd node
 % docker build . -t legrand_hubitat_bridge
 ```
-- Run the docker image using your environment's docker engine.
-  You should see something like `Server listening on port 21120` on the console
+- Run the docker image using your environment's docker engine (you'll need to expose port 21120). For example,
+```
+% docker run -p 21120:21120 legrand_hubitat_bridge
+```
+
+You should see something like `Server listening on port 21120` on the console
 
 ### Run node natively (option 2)
 - If you don't have node installed yet, install [node](https://nodejs.org/en/download/) on the web server machine. The installation steps will vary based on your flavor of Linux.
