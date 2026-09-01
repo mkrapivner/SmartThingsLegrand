@@ -1,0 +1,41 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # Matches the Python version the Docker image ships.
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: server/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r server/requirements.txt
+
+      - name: Run bridge tests
+        working-directory: server
+        # Binds localhost ports and drives the real bridge against a fake
+        # LC7001 and a fake Hubitat. Exits non-zero on any failed check.
+        run: python test_bridge.py
+
+  docker:
+    name: docker build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the bridge image
+        run: docker build -t legrand_hubitat_bridge server
