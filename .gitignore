@@ -1,7 +1,7 @@
-node_modules
 .idea
 __pycache__/
-*.pyc
 .venv/
 venv/
-config.json
+# Written at runtime by POST /init; holds the hub IP and access token.
+/config.json
+/server/config.json

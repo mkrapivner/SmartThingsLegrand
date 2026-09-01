@@ -1,8 +1,15 @@
 name: Tests
 
+# push is limited to master so that a branch with an open PR does not run the
+# whole workflow twice for the same commit.
 on:
   push:
+    branches: [master]
   pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -31,7 +38,6 @@ jobs:
         run: python test_bridge.py
 
   docker:
-    name: docker build
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -39,3 +45,19 @@ jobs:
 
       - name: Build the bridge image
         run: docker build -t legrand_hubitat_bridge server
+
+      # A successful build only proves the Dockerfile parses. Run the image the
+      # way the README tells users to -- config volume included -- so that CMD,
+      # EXPOSE and the LEGRAND_CONFIG path are actually exercised.
+      - name: Smoke-test the image
+        run: |
+          docker run -d --name bridge -p 21120:21120 \
+            -v legrand_config:/data legrand_hubitat_bridge
+          for _ in $(seq 30); do
+            curl -fsS http://localhost:21120/status -o /tmp/status.json && break
+            sleep 1
+          done
+          docker logs bridge
+          cat /tmp/status.json
+          grep -q '"initHubConnected": *false' /tmp/status.json
+          docker rm -f bridge

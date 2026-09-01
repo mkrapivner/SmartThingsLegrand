@@ -39,8 +39,8 @@ from waitress import serve
 # Configuration
 # ----------------------------------------------------------------------------
 
-SERVER_PORT = 21120           # port this bridge listens on, for the hub
-LC7001_PORT = 2112            # port on the Legrand LC7001 controller
+SERVER_PORT = int(os.environ.get("LEGRAND_PORT", 21120))         # port this bridge listens on
+LC7001_PORT = int(os.environ.get("LEGRAND_LC7001_PORT", 2112))   # port on the LC7001 controller
 DELIMITER = b"\x00"           # LC7001 frames JSON messages with a NUL byte
 
 CONNECT_TIMEOUT = 10.0        # seconds to wait for the LC7001 TCP handshake
@@ -52,7 +52,7 @@ MAX_RX_BUFFER = 1024 * 1024   # bail out if we never see a delimiter
 HUB_POST_TIMEOUT = 10.0       # timeout when POSTing to the Hubitat
 RESTART_CONNECT_DELAY = 2.0   # matches the Node version's startup delay
 
-CONFIG_PATH = os.environ.get("LEGRAND_CONFIG", "./config.json")
+DEFAULT_CONFIG_PATH = "./config.json"
 
 # The Service the hub app switches on for anything that is not raw LC7001 output.
 DEFAULT_SERVICE = "WebServerUpdate"
@@ -373,9 +373,15 @@ class LC7001Client:
 # Config persistence
 # ----------------------------------------------------------------------------
 
+def config_path():
+    """Resolved per call, not at import, so setting LEGRAND_CONFIG works
+    regardless of when this module is imported."""
+    return os.environ.get("LEGRAND_CONFIG", DEFAULT_CONFIG_PATH)
+
+
 def load_config():
     try:
-        with open(CONFIG_PATH) as fh:
+        with open(config_path()) as fh:
             data = json.load(fh)
     except FileNotFoundError:
         log.info("Config file does not exist")
@@ -389,7 +395,7 @@ def load_config():
 
 def save_config(hub_ip, api_server_url):
     try:
-        with open(CONFIG_PATH, "w") as fh:
+        with open(config_path(), "w") as fh:
             json.dump({"hubIP": hub_ip, "apiServerUrl": api_server_url}, fh)
         log.info("Configuration file saved successfully.")
     except OSError as exc:
