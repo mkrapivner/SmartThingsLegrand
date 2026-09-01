@@ -156,7 +156,7 @@ def prepareNodeMessage(String nodePath, Map params=null) {
         if (nodePath in ["/command", "/init"])
             httpMethod = "POST"
 
-        def reqParams = [uri: "http://${state.node_ip}:${state.node_port}/${nodePath}"]
+        def reqParams = [uri: "http://${state.node_ip}:${state.node_port}${nodePath}"]
         if (httpMethod == "POST") {
             reqParams << [body: new groovy.json.JsonBuilder(params).toPrettyString()]
             reqParams << [contentType: "application/json"]
