@@ -1,0 +1,8 @@
+# The build only needs requirements.txt and legrand.py. Without this, a local
+# `docker build .` ships the whole venv to the daemon as build context.
+.venv/
+venv/
+__pycache__/
+*.pyc
+config.json
+test_bridge.py
