@@ -29,7 +29,7 @@ definition(
 preferences {
     page(name:"hubInfo", title:"Legrand Hub Info", content:"hubInfo", install:false, uninstall:true)
     page(name:"hubDiscovery", title:"Connect with your Legrand Hub", content:"hubDiscovery", install: false, uninstall:true)
-    page(name:"lightsDiscovery", title:"Add These Lights", content:"lightsDiscovery", refreshInterval:5, install:true)
+    page(name:"lightsDiscovery", title:"Add These Lights", content:"lightsDiscovery", install:true)
 }
 
 mappings {
@@ -127,7 +127,9 @@ def lightsDiscovery() {
             }
         } else {
             // we have the list now
-            return dynamicPage(name:"lightsDiscovery", title:"Add These Lights", install: true) {
+            // refreshInterval:0 stops the auto-refresh once the list is complete; otherwise the
+            // page reloads under you and collapses the open Select Lights dropdown.
+            return dynamicPage(name:"lightsDiscovery", title:"Add These Lights", install: true, refreshInterval: 0) {
                 section("See the available lights:") {
                     input "selectedLights", "enum", required:false, title:"Select Lights (${numFound} found)", multiple:true, options:options
                 }
