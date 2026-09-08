@@ -13,6 +13,8 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  */
+import groovy.transform.Field
+
 definition(
         name: "Legrand (Connect)",
         namespace: "mkrapivner",
@@ -25,6 +27,14 @@ definition(
         singleInstance: true
 )
 
+
+// Must match the names in the drivers' metadata.
+@Field static final String DIMMER_DRIVER = "Legrand Dimmer"
+@Field static final String SWITCH_DRIVER = "Legrand Switch"
+
+// Zone properties the LC7001 reports that the drivers have no case for. Passing
+// them through makes every driver log an "Unknown property" warning per update.
+@Field static final List METADATA_PROPERTIES = ["Name", "DeviceType"]
 
 preferences {
     page(name:"hubInfo", title:"Legrand Hub Info", content:"hubInfo", install:false, uninstall:true)
@@ -213,7 +223,9 @@ def postHubNotify() {
                 log.error ("ZID not found in POST request. Request JSON: ${reqJSON}")
             else {
                 def d = getChildDevice(createDNI(reqJSON.ZID))
-                d.propertiesChanged(reqJSON.PropertyList?:null)
+                // A zone the user never added to Hubitat has no child device.
+                if (d)
+                    d.propertiesChanged(deviceProperties(reqJSON.PropertyList))
             }
             break
         case "ListZones":
@@ -229,7 +241,8 @@ def postHubNotify() {
             def d = getChildDevice(createDNI(zone))
             if (d)
             // device already added, just update it's properties
-                d.propertiesChanged(reqJSON.PropertyList?:null)
+                d.propertiesChanged(deviceProperties(reqJSON.PropertyList))
+            // Stored unfiltered: addLights() needs Name and DeviceType.
             state.lightsList[Integer.toString(zone)] = reqJSON.PropertyList
             break
         case "ZoneAdded":
@@ -384,22 +397,89 @@ def rebootHandler(evt) {
 }
 
 def addLights() {
+    log.debug "In addLights, selected zones: ${selectedLights}, zones known to the app: ${state.lightsList?.keySet()}"
+
     selectedLights.each { zid ->
         def newLight = state.lightsList[zid.toString()]
-        //log.trace "newLight = " + newLight
-        if (newLight != null) {
-            def newLightDNI = createDNI (zid)
-            // log.trace "newLightDNI = " + newLightDNI
-            def d = getChildDevice(newLightDNI)
-            if(!d) {
-                d = addChildDevice("mkrapivner", "Dimmer Switch", newLightDNI, [label: newLight.Name])
-                log.trace "created ${d.displayName} with id ${newLightDNI}"
+        if (newLight == null) {
+            log.warn "Selected zone ${zid} is not in the app's zone list, skipping it. Re-run discovery."
+            return
+        }
 
-                // set up device capabilities here ??? TODO ???
-            } else {
-                log.debug "Found existing light ${d.displayName} with DNI ${newLightDNI}, not adding another."
+        def newLightDNI = createDNI (zid)
+        def zoneName = newLight.Name?.trim()      // the hub pads some zone names
+        def driver = driverForZone(newLight)
+        def d = getChildDevice(newLightDNI)
+
+        // Removing a device from the Devices page can leave the app's child entry
+        // behind. getChildDevice() then hands back something we can no longer talk
+        // to, and the old code just logged "not adding another" and moved on.
+        if (d && !isUsableChild(d)) {
+            log.warn "Deleting child device ${newLightDNI} so it can be re-created"
+            try {
+                deleteChildDevice(newLightDNI)
+                d = null
+            } catch (e) {
+                log.error "Could not delete ${newLightDNI}: ${e}"
             }
         }
+
+        if (!d) {
+            // Caught per light: an unhandled throw here used to abandon every
+            // remaining light in the selection without creating anything.
+            try {
+                d = addChildDevice("mkrapivner", driver, newLightDNI, [label: zoneName])
+                log.trace "created ${d.displayName} with id ${newLightDNI} using the ${driver} driver"
+            } catch (e) {
+                log.error "Could not create a device for zone ${zid} (${zoneName}) with DNI ${newLightDNI}: ${e}"
+            }
+            return
+        }
+
+        log.debug "Found existing light ${d.displayName} with DNI ${newLightDNI}, not adding another."
+
+        // The label is only ever set at creation, so a zone renamed on the Legrand
+        // side would otherwise keep its old name here forever.
+        if (zoneName && d.label != zoneName) {
+            log.trace "renaming ${d.label} to ${zoneName}"
+            d.setLabel(zoneName)
+        }
+
+        // There is no API for swapping an existing device's driver, so say so and
+        // let the user re-type it.
+        def actual = childTypeName(d)
+        if (actual && actual != driver)
+            log.warn "${d.displayName} uses the ${actual} driver, but the hub reports zone ${zid} as a ${newLight.DeviceType}. Change its Type to ${driver} on its device page."
+    }
+}
+
+// The LC7001 reports "Dimmer" or "Switch" per zone. Anything unrecognised gets the
+// dimmer driver, which is what every zone used to get.
+private driverForZone(zoneProps) {
+    return zoneProps?.DeviceType == "Switch" ? SWITCH_DRIVER : DIMMER_DRIVER
+}
+
+private deviceProperties(propList) {
+    if (!propList)
+        return null
+    return propList.findAll { key, val -> !METADATA_PROPERTIES.contains(key) }
+}
+
+private childTypeName(d) {
+    try {
+        return d.typeName
+    } catch (e) {
+        return null
+    }
+}
+
+// A child left behind by a device removal answers with a null DNI, or throws.
+private isUsableChild(d) {
+    try {
+        return d.deviceNetworkId != null
+    } catch (e) {
+        log.warn "Child device looks stale (${e}); it will be re-created"
+        return false
     }
 }
 

@@ -47,14 +47,14 @@ You should see something like `Server listening on port 21120` on the console
 - To keep it running across reboots, run it under whatever supervisor you prefer (`systemd` is the usual choice on Linux).
 
 ### Hubitat
-- Add code from **LegrandConnect.groovy** as the app, and **LegrandSwitch.groovy** as the device handler.
+- Add code from **LegrandConnect.groovy** as the app, and both **LegrandDimmer.groovy** and **LegrandSwitch.groovy** as device handlers. The app looks the drivers up by the name in their `metadata`, so install them before installing the app.
 - Install the app: Apps -> Add User App -> Legrand (Connect).
 - Once the app starts, you will need to enter the IP address of the web server, port number of the web server (enter **21120**, unless this port number conflicts with something in your system — under Docker, publish a different host port with `-p 21121:21120`; running natively, set `LEGRAND_PORT=21121` — and enter that number here).
 - You will also need to enter the IP address of the Legrand Hub.
 - If you want to receive push notifications when the Legrand hub disconnects and reconnects from the bridge server, select your device in "Notify this device" section. The Legrand hub disconnect/reconnect events are the only notifications the app sends.
 - After you tap **Next**, it will take a few seconds to discover the Legrand lights in your system.
 - Select the ones you want to control from Hubitat, and tap **Done**
-- The lights should show up as "Dimmer Switch" under Devices.
+- The lights should show up under Devices as "Legrand Dimmer" or "Legrand Switch", depending on what the Legrand hub reports each zone to be.
 
 ## Testing the server
 `server/test_bridge.py` runs the bridge against a fake LC7001 hub and a fake Hubitat, so you can check the server end to end without touching real hardware. It needs the requirements installed, so follow option 2 above first:
@@ -65,4 +65,5 @@ You should see something like `Server listening on port 21120` on the console
 It prints a PASS/FAIL line per check, exits non-zero on failure, and takes well under a second.
 
 ### Notes
-- Currently, there is no differentiation between "Switch" and "Dimmer". As a result, the dimmer slider will show up in the device handler even for the switches without the dimmer. It won't hurt anything, but obviously don't expect it to dim your lights as you play around with it... The on/off functionality still works.
+- Switches and dimmers get separate drivers. The app picks between them using the `DeviceType` the Legrand hub reports for the zone, falling back to **Legrand Dimmer** for anything it does not recognise.
+- Devices added by an older version of the app all got the dimmer driver, so a switch may still show a dimmer slider that does nothing. Hubitat has no API for changing a device's driver, so the app cannot fix those itself — it logs a warning naming each mismatched device, and you change the **Type** on the device page by hand.
