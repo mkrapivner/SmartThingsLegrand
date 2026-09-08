@@ -1,5 +1,5 @@
 /**
- *  Legrand (Unofficial) Switch Device Handler
+ *  Legrand (Unofficial) Dimmer Device Handler
  *  Copyright 2019-2026 Matt Krapivner
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
@@ -13,7 +13,8 @@
  *
  */
 metadata {
-    definition (name: "Legrand Switch", namespace: "mkrapivner", author: "Matt Krapivner") {
+    definition (name: "Legrand Dimmer", namespace: "mkrapivner", author: "Matt Krapivner") {
+        capability "Switch Level"
         capability "Actuator"
         capability "Indicator"
         capability "Switch"
@@ -34,6 +35,9 @@ metadata {
                 attributeState "turningOn", label:'Turning On', action:"switch.off", icon:"st.switches.switch.on", backgroundColor:"#00a0dc", nextState:"turningOff"
                 attributeState "turningOff", label:'Turning Off', action:"switch.on", icon:"st.switches.switch.off", backgroundColor:"#ffffff", nextState:"turningOn"
             }
+            tileAttribute ("device.level", key: "SLIDER_CONTROL") {
+                attributeState "level", action:"switch level.setLevel"
+            }
         }
     }
 }
@@ -50,6 +54,10 @@ def propertiesChanged (propList) {
                 sendEvent(name: "switch", value: "on")
             else if (val.toBoolean() == false && device.currentState("switch")?.value != "off")
                 sendEvent(name: "switch", value: "off")
+        } else if (key == "PowerLevel") {
+            if (val.toInteger() != device.currentState("level")?.value) {
+                sendEvent(name: "level", value: val.toInteger())
+            }
         } else
             log.warn ("Unknown property in property list: ${key}. If this is a new device, disregard this message.")
     }
@@ -76,6 +84,12 @@ def on() {
 def off() {
     def zid = getLightZID()
     def cmd = parent.setZonePropertiesCmd(zid, ["Power": false])
+    parent.sendLegrandHubMessage(cmd)
+}
+
+def setLevel(value) {
+    def zid = getLightZID()
+    def cmd = parent.setZonePropertiesCmd(zid, ["PowerLevel": value])
     parent.sendLegrandHubMessage(cmd)
 }
 
